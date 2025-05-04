@@ -19,16 +19,35 @@ mongoose
 app.use(express.json());
 app.use(cookieParser());
 
+// Updated CORS configuration
 app.use(
-  cors({ origin: "https://dsa-gpt-client.onrender.com", credentials: true })
+  cors({
+    origin: "https://dsa-gpt-client.onrender.com",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
 );
+
+// Diagnose authentication issues
+app.use((req, res, next) => {
+  console.log("Request cookies:", req.cookies);
+  console.log("Auth header:", req.headers.authorization);
+  next();
+});
 
 const authMiddleware = (req, res, next) => {
   const token = req.cookies.token;
-  if (!token) return res.sendStatus(401);
+
+  console.log("Auth middleware - token:", token ? "present" : "missing");
+
+  if (!token) return res.status(401).json({ error: "No authentication token" });
 
   jwt.verify(token, "secret", (err, user) => {
-    if (err) return res.sendStatus(403);
+    if (err) {
+      console.log("Token verification error:", err.message);
+      return res.status(403).json({ error: "Invalid or expired token" });
+    }
     req.user = user;
     next();
   });
@@ -55,8 +74,18 @@ app.post("/api/register", async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: "None",
+        maxAge: 3600000, // 1 hour in milliseconds
       })
-      .sendStatus(201);
+      .status(201)
+      .json({
+        message: "Account created successfully",
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          gender: user.gender,
+        },
+      });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error creating account" });
@@ -64,20 +93,42 @@ app.post("/api/register", async (req, res) => {
 });
 
 app.post("/api/login", async (req, res) => {
-  const { email, password } = req.body;
-  const user = await User.findOne({ email });
-  if (!user) return res.sendStatus(401);
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) return res.sendStatus(401);
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(401).json({ message: "Invalid credentials" });
 
-  const token = jwt.sign(
-    { id: user._id, email: user.email, name: user.name, gender: user.gender },
-    "secret",
-    { expiresIn: "1h" }
-  );
-  res
-    .cookie("token", token, { httpOnly: true, secure: true, sameSite: "None" })
-    .sendStatus(200);
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch)
+      return res.status(401).json({ message: "Invalid credentials" });
+
+    const token = jwt.sign(
+      { id: user._id, email: user.email, name: user.name, gender: user.gender },
+      "secret",
+      { expiresIn: "1h" }
+    );
+
+    res
+      .cookie("token", token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+        maxAge: 3600000, // 1 hour in milliseconds
+      })
+      .status(200)
+      .json({
+        message: "Login successful",
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          gender: user.gender,
+        },
+      });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Server error during login" });
+  }
 });
 
 app.get("/api/me", authMiddleware, (req, res) => {
@@ -85,7 +136,14 @@ app.get("/api/me", authMiddleware, (req, res) => {
 });
 
 app.post("/api/logout", (req, res) => {
-  res.clearCookie("token").sendStatus(200);
+  res
+    .clearCookie("token", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+    })
+    .status(200)
+    .json({ message: "Logged out successfully" });
 });
 
 // Endpoint to save chat history
@@ -109,7 +167,7 @@ app.post("/api/chat", authMiddleware, async (req, res) => {
   }
 });
 
-// get all chats infor
+// get all chats info
 app.get("/api/chats", authMiddleware, async (req, res) => {
   try {
     const chats = await Chat.find({ userId: req.user.id })
@@ -120,7 +178,7 @@ app.get("/api/chats", authMiddleware, async (req, res) => {
     res.json(chats);
   } catch (error) {
     console.error(error);
-    res.sendStatus(500);
+    res.status(500).json({ error: "Error fetching chats" });
   }
 });
 
@@ -179,8 +237,13 @@ app.put("/api/chat/:id", authMiddleware, async (req, res) => {
   }
 });
 
+// Test endpoint to verify server is running
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "Server is running" });
+});
+
 const PORT = process.env.PORT || 8000;
 
 app.listen(PORT, () => {
-  console.log("Server is running on port 8000");
+  console.log(`Server is running on port ${PORT}`);
 });
