@@ -29,16 +29,6 @@ app.use(
 // Add explicit OPTIONS handler
 app.options("*", cors());
 
-// Update your cookie settings in login/register routes:
-res.cookie("token", token, {
-  httpOnly: true,
-  secure: true,
-  sameSite: "none",
-  domain: "code-gpt-server.onrender.com", // Explicit domain
-  maxAge: 3600000, // 1 hour
-  path: "/",
-});
-
 const authMiddleware = (req, res, next) => {
   const token = req.cookies.token;
   if (!token) return res.sendStatus(401);
@@ -66,7 +56,14 @@ app.post("/api/register", async (req, res) => {
     );
 
     // Set the token as a cookie and send success response
-    res.cookie("token", token, { httpOnly: true }).sendStatus(201);
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      domain: "code-gpt-server.onrender.com", // Explicit domain
+      maxAge: 3600000, // 1 hour
+      path: "/",
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error creating account" });
@@ -85,7 +82,14 @@ app.post("/api/login", async (req, res) => {
     "secret",
     { expiresIn: "1h" }
   );
-  res.cookie("token", token, { httpOnly: true }).sendStatus(200);
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    domain: "code-gpt-server.onrender.com", // Explicit domain
+    maxAge: 3600000, // 1 hour
+    path: "/",
+  });
 });
 
 app.get("/api/me", authMiddleware, (req, res) => {
