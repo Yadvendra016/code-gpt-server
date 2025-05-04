@@ -17,7 +17,9 @@ mongoose
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+app.use(
+  cors({ origin: "https://dsa-gpt-client.onrender.com", credentials: true })
+);
 
 const authMiddleware = (req, res, next) => {
   const token = req.cookies.token;
