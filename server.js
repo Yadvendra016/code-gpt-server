@@ -21,7 +21,7 @@ app.use(cookieParser());
 
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://dsa-gpt-client.onrender.com",
+  "https://dsa-gpt-client.onrender.com/",
 ];
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));
