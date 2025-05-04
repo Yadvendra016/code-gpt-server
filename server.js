@@ -7,6 +7,7 @@ const cors = require("cors");
 const User = require("./model/User");
 const Chat = require("./model/Chat");
 const app = express();
+require("dotenv").config();
 
 mongoose
   .connect(
@@ -17,17 +18,13 @@ mongoose
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(
-  cors({
-    origin: "https://dsa-gpt-client.onrender.com",
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
-  })
-);
 
-// Add explicit OPTIONS handler
-app.options("*", cors());
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://dsa-gpt-client.onrender.com",
+];
+
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 
 const authMiddleware = (req, res, next) => {
   const token = req.cookies.token;
@@ -56,14 +53,13 @@ app.post("/api/register", async (req, res) => {
     );
 
     // Set the token as a cookie and send success response
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      domain: "code-gpt-server.onrender.com", // Explicit domain
-      maxAge: 3600000, // 1 hour
-      path: "/",
-    });
+    res
+      .cookie("token", token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+      })
+      .sendStatus(201);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error creating account" });
@@ -82,14 +78,9 @@ app.post("/api/login", async (req, res) => {
     "secret",
     { expiresIn: "1h" }
   );
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    domain: "code-gpt-server.onrender.com", // Explicit domain
-    maxAge: 3600000, // 1 hour
-    path: "/",
-  });
+  res
+    .cookie("token", token, { httpOnly: true, secure: true, sameSite: "None" })
+    .sendStatus(200);
 });
 
 app.get("/api/me", authMiddleware, (req, res) => {
@@ -191,6 +182,8 @@ app.put("/api/chat/:id", authMiddleware, async (req, res) => {
   }
 });
 
-app.listen(8000, () => {
+const PORT = process.env.PORT || 8000;
+
+app.listen(PORT, () => {
   console.log("Server is running on port 8000");
 });
