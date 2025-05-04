@@ -24,7 +24,9 @@ const allowedOrigins = [
   "https://dsa-gpt-client.onrender.com/",
 ];
 
-app.use(cors({ origin: allowedOrigins, credentials: true }));
+app.use(
+  cors({ origin: "https://dsa-gpt-client.onrender.com/", credentials: true })
+);
 
 const authMiddleware = (req, res, next) => {
   const token = req.cookies.token;
