@@ -4,7 +4,9 @@ const chatSchema = new mongoose.Schema({
   userMessage: { type: String, required: true },
   botMessage: { type: String, required: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  conversationId: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
 });
 
 const Chat = mongoose.model("Chat", chatSchema);

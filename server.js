@@ -78,21 +78,92 @@ app.post("/api/logout", (req, res) => {
 
 // Endpoint to save chat history
 app.post("/api/chat", authMiddleware, async (req, res) => {
-  const { userMessage, botMessage, userId } = req.body;
-  const chat = new Chat({ userMessage, botMessage, userId });
-  await chat.save();
-  res.sendStatus(201);
+  const { userMessage, botMessage, userId, conversationId } = req.body;
+
+  try {
+    const chat = new Chat({
+      userMessage,
+      botMessage,
+      userId,
+      conversationId:
+        conversationId || new mongoose.Types.ObjectId().toString(), // Generate if not provided
+    });
+
+    await chat.save();
+    res.status(201).json(chat);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Error saving chat");
+  }
 });
 
+// get all chats infor
 app.get("/api/chats", authMiddleware, async (req, res) => {
   try {
-    const chats = await Chat.find({ userId: req.user.id }).sort({
-      createdAt: 1,
-    });
+    const chats = await Chat.find({ userId: req.user.id })
+      .sort({
+        createdAt: 1,
+      })
+      .lean();
     res.json(chats);
   } catch (error) {
     console.error(error);
     res.sendStatus(500);
+  }
+});
+
+// Delete a chat pair (user message and corresponding bot message)
+app.delete("/api/chat/:id", authMiddleware, async (req, res) => {
+  try {
+    // Validate the ID format first
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid chat ID format" });
+    }
+
+    const deletedChat = await Chat.findByIdAndDelete(req.params.id);
+    if (!deletedChat) {
+      return res.status(404).json({ error: "Chat not found" });
+    }
+    res.sendStatus(204);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server error while deleting chat" });
+  }
+});
+
+// Update a user message and replace subsequent conversation
+app.put("/api/chat/:id", authMiddleware, async (req, res) => {
+  try {
+    const { userMessage, botMessage, conversationId } = req.body;
+
+    // Find the chat first to make sure it exists
+    const chatToUpdate = await Chat.findById(req.params.id);
+
+    if (!chatToUpdate) {
+      return res.status(404).json({ error: "Chat not found" });
+    }
+
+    // Update the existing chat message
+    await Chat.findByIdAndUpdate(req.params.id, {
+      userMessage,
+      botMessage,
+      updatedAt: Date.now(),
+    });
+
+    // Delete all subsequent messages in this conversation
+    if (chatToUpdate.conversationId) {
+      await Chat.deleteMany({
+        userId: req.user.id,
+        conversationId: chatToUpdate.conversationId,
+        _id: { $ne: req.params.id }, // Don't delete the message we just updated
+        createdAt: { $gt: chatToUpdate.createdAt },
+      });
+    }
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Update chat error:", error);
+    res.status(500).json({ error: "Server error while updating chat" });
   }
 });
 
