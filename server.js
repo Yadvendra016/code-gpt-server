@@ -17,24 +17,27 @@ mongoose
 
 app.use(express.json());
 app.use(cookieParser());
-// Replace your current CORS middleware with this:
 app.use(
   cors({
     origin: "https://dsa-gpt-client.onrender.com",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
   })
 );
 
-// Add this to handle preflight requests
-app.options(
-  "*",
-  cors({
-    origin: "https://dsa-gpt-client.onrender.com",
-    credentials: true,
-  })
-);
+// Add explicit OPTIONS handler
+app.options("*", cors());
+
+// Update your cookie settings in login/register routes:
+res.cookie("token", token, {
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+  domain: "code-gpt-server.onrender.com", // Explicit domain
+  maxAge: 3600000, // 1 hour
+  path: "/",
+});
 
 const authMiddleware = (req, res, next) => {
   const token = req.cookies.token;
