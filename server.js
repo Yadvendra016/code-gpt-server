@@ -24,7 +24,6 @@ app.use(
   cors({
     origin: "https://dsa-gpt-client.onrender.com",
     methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
