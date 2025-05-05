@@ -25,7 +25,6 @@ app.use(
     origin: "https://dsa-gpt-client.onrender.com",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -74,7 +73,8 @@ app.post("/api/register", async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: "None",
-        maxAge: 3600000, // 1 hour in milliseconds
+        maxAge: 3600000,
+        path: "/",
       })
       .status(201)
       .json({
@@ -113,7 +113,8 @@ app.post("/api/login", async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: "None",
-        maxAge: 3600000, // 1 hour in milliseconds
+        maxAge: 3600000,
+        path: "/",
       })
       .status(200)
       .json({
